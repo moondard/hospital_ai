@@ -4,6 +4,7 @@ from app.config import settings
 
 class CRMError(Exception):
     """Ошибка CRM API с кодом и сообщением из ответа."""
+
     def __init__(self, status_code: int, code: str, message: str):
         self.status_code = status_code
         self.code = code
@@ -85,3 +86,6 @@ class CRMClient:
             "scheduled_at": scheduled_at,
         }
         return await self._request("POST", "/visits", json=body)
+
+    async def update_visit(self, visit_id: int, **fields) -> dict:
+        return await self._request("PATCH", f"/visits/{visit_id}", json=fields)

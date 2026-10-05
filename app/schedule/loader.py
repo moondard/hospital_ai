@@ -40,6 +40,33 @@ def load_schedule(xlsx_path: str, db_path: str = DB_PATH) -> int:
     return len(df)
 
 
+def load_durations(xlsx_path: str, db_path: str = DB_PATH) -> int:
+    df = pd.read_excel(xlsx_path, sheet_name="По врачам")
+
+    df = df.rename(columns={
+        "ФИО": "doctor_name",
+        "Специальность": "specialty",
+        "Длит. приёма, мин": "duration_min",
+    })
+
+    df = df[["doctor_name", "specialty", "duration_min"]].dropna(
+        subset=["doctor_name", "duration_min"]
+    )
+    df["duration_min"] = df["duration_min"].astype(int)
+
+    conn = sqlite3.connect(db_path)
+    df.to_sql("doctor_duration", conn, if_exists="replace", index=False)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_duration_name ON doctor_duration(doctor_name)"
+    )
+    conn.commit()
+    conn.close()
+
+    return len(df)
+
+
 if __name__ == "__main__":
-    n = load_schedule("data/raspisanie.xlsx")
-    print(f"Загружено слотов: {n}")
+    n_slots = load_schedule("data/raspisanie.xlsx")
+    n_durations = load_durations("data/raspisanie.xlsx")
+    print(f"Загружено слотов: {n_slots}")
+    print(f"Загружено длительностей: {n_durations}")

@@ -1,5 +1,6 @@
 import json
 from datetime import datetime, timedelta, timezone
+import re
 
 from ollama import chat
 
@@ -55,6 +56,17 @@ class Agent:
                 })
 
     async def _execute(self, name: str, args: dict):
+        if name == "book_appointment":
+            if not self._user_confirmed():
+                return {
+                    "error": (
+                        "Запись НЕ создана. Ты не спросил подтверждение у пациента. "
+                        "Сейчас задай вопрос: 'Подтверждаете запись к врачу X на ДД.ММ.ГГГГ ЧЧ:ММ?' "
+                        "и дождись ответа 'да' или 'подтверждаю'. "
+                        "После подтверждения вызови book_appointment заново."
+                    )
+                }
+
         for t in TOOLS:
             if t.__name__ == name:
                 try:
@@ -62,3 +74,18 @@ class Agent:
                 except Exception as e:
                     return {"error": f"{type(e).__name__}: {e}"}
         return {"error": f"Инструмент '{name}' не найден"}
+
+    import re
+
+    def _user_confirmed(self) -> bool:
+        last_user = next(
+            (m["content"]
+             for m in reversed(self.history) if m["role"] == "user"),
+            "",
+        )
+        words = set(re.findall(r"\w+", last_user.lower()))
+        confirm_words = {
+            "да", "подтверждаю", "подтвердить", "ок", "хорошо",
+            "записывай", "согласен", "согласна", "верно",
+        }
+        return bool(words & confirm_words)

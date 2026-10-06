@@ -29,26 +29,39 @@ async def create_client(last_name: str, first_name: str, birth_date: str,
 async def get_slots(doctor_name: str, date_str: str) -> list[dict]:
     target = datetime.strptime(date_str, DATE_FMT).date()
 
-    all_slots = build_all_slots(doctor_name, target)
-    if not all_slots:
+    doctors = await crm.list_doctors()
+
+    matched = [doc for doc in doctors if doc["full_name"] == doctor_name]
+
+    if not matched:
+        matched = [
+            doc for doc in doctors
+            if doc["speciality"].lower() == doctor_name.lower()
+            and doc["is_active"]
+        ]
+
+    if not matched:
         return []
 
-    doctors = await crm.list_doctors()
-    doctor = next(
-        (d for d in doctors if d["full_name"] == doctor_name), None
-    )
-    if not doctor:
-        return all_slots
+    all_free = []
+    for doctor in matched:
+        slots = build_all_slots(doctor["full_name"], target)
+        if not slots:
+            continue
+        visits = await crm.list_visits(
+            doctor_id=doctor["id"],
+            status="Запланирована",
+            date_from=date_str,
+            date_to=date_str,
+        )
+        busy = {v["scheduled_at"] for v in visits}
+        free = filter_busy(slots, busy)
+        for slot in free:
+            slot["doctor_name"] = doctor["full_name"]
+            slot["doctor_id"] = doctor["id"]
+        all_free.extend(free)
 
-    visits = await crm.list_visits(
-        doctor_id=doctor["id"],
-        status="Запланирована",
-        date_from=date_str,
-        date_to=date_str,
-    )
-    busy = {v["scheduled_at"] for v in visits}
-
-    return filter_busy(all_slots, busy)
+    return all_free
 
 
 async def book_appointment(client_id: int, doctor_id: int,

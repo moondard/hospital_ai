@@ -1,3 +1,7 @@
 ollama
 httpx
 pydantic-settings
+pydantic
+python-dotenv
+pandas
+openpyxl

@@ -76,7 +76,7 @@ async def list_appointments(client_id: int) -> list[dict]:
     visits = await crm.list_visits(client_id=client_id)
     return [
         {
-            "id": v["id"],
+            "appointment_id": v["id"],
             "doctor_name": v["doctor"]["full_name"],
             "specialty": v["doctor"]["specialty"],
             "scheduled_at": v["scheduled_at"],
@@ -86,5 +86,5 @@ async def list_appointments(client_id: int) -> list[dict]:
     ]
 
 
-async def cancel_appointment(visit_id: int) -> dict:
-    return await crm.update_visit(visit_id, status="Отменена")
+async def cancel_appointment(appointment_id: int) -> dict:
+    return await crm.update_visit(appointment_id, status="Отменена")
